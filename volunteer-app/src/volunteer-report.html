@@ -10,6 +10,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="shared-styles.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/iron-icons/communication-icons.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../bower_components/paper-input/paper-textarea.html">
 
 <dom-module id="volunteer-report">
   <template>
@@ -22,10 +30,21 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </style>
 
     <div class="card">
-      <div class="circle">2</div>
+      <div class="circle">3</div>
       <h1>Report your status</h1>
-      <p>Ea duis bonorum nec, falli paulo aliquid ei eum.</p>
-      <p>Id nam odio natum malorum, tibique copiosae expetenda mel ea.Detracto suavitate repudiandae no eum. Id adhuc minim soluta nam.Id nam odio natum malorum, tibique copiosae expetenda mel ea.</p>
+      <p></p>
+      <p>Send a report to the response coordinator</p>
+      <paper-item>Report details</paper-item>
+      <paper-input label="Location">
+          <!-- <iron-icon icon="communication:location-on" slot="prefix"></iron-icon> -->
+      </paper-input>
+      <paper-textarea label="Report">
+          <!-- <iron-icon icon="communication:message" slot="prefix"></iron-icon> -->
+      </paper-textarea>
+      <div class="flex layout horizontal">
+        <div class="flex"></div>
+        <paper-button raised class="indigo">Send</paper-button>
+      </div>  
     </div>
   </template>
 

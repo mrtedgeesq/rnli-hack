@@ -10,28 +10,178 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="shared-styles.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/iron-icons/communication-icons.html">
+<link rel="import" href="../bower_components/iron-icons/notification-icons.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../bower_components/paper-input/paper-textarea.html">
+<link rel="import" href="../bower_components/vaadin-grid/vaadin-grid.html">
+<link rel="import" href="../bower_components/vaadin-grid/vaadin-grid-sorter.html">
+<link rel="import" href="../bower_components/geo-location/geo-location.html">
+<link rel="import" href="../bower_components/google-map/google-map.html">
+<link rel="import" href="../bower_components/google-map/google-map-marker.html">
 
 <dom-module id="volunteer-tasking">
   <template>
     <style include="shared-styles">
       :host {
         display: block;
-
         padding: 10px;
       }
+      google-map {
+        height: 300px;
+      }
+    
     </style>
+    <geo-location latitude="{{latitude}}" longitude="{{longitude}}">  </geo-location>
 
     <div class="card">
-      <div class="circle">3</div>
-      <h1>Your tasks</h1>
-      <p>Modus commodo minimum eum te, vero utinam assueverit per eu.</p>
-      <p>Ea duis bonorum nec, falli paulo aliquid ei eum.Has at minim mucius aliquam, est id tempor laoreet.Pro saepe pertinax ei, ad pri animal labores suscipiantur.</p>
+      <div class="circle">2</div>
+
+      <h1>Your task</h1> 
+      <h3>[[userTask.title]]</h3>
+      <p>[[userTask.issuedAt]]</p>
+      <p>[[userTask.description]]</p>
+      <!-- <h3>Assist Gloria Davis</h3>
+      <p>2017-09-30 18:30</p>
+      <p>Gloria Davies has requested assistance, please proceed</p> -->
+
+      <h1>Your status</h1>
+      <paper-checkbox checked>Ready for tasking</paper-checkbox>
+      <p>Your location</p>
+      <google-map zoom="14" latitude="[[latitude]]" longitude="[[longitude]]" api-key="AIzaSyCLo73IZ51Hy1ww6VUhuVz0N04_YyB9E54">
+          <google-map-marker slot="markers" latitude="[[latitude]]" longitude="[[longitude]]"></google-map-marker>
+          <google-map-marker slot="markers" latitude="[[userTask.location.lat]]" longitude="[[userTask.location.lng]]">
+            <h3>[[userTask.title]]</h3>
+            <p>[[userTask.issuedAt]]</p>
+            <p>[[userTask.description]]</p>
+          </google-map-marker>
+      </google-map>
+
+      <h1>All tasks</h1>
+      <p>Tasks issued to your team</p>
+
+      <vaadin-grid items='{{userTasks}}'>
+        <vaadin-grid-column width="140px" flex-grow="0">
+            <template class="header">
+              <vaadin-grid-sorter path="issuedAt">Issued At</vaadin-grid-sorter>
+            </template>
+            <template>[[item.issuedAt]]</template>
+        </vaadin-grid-column>
+        <vaadin-grid-column>
+            <template class="header">
+              <vaadin-grid-sorter path="title">Task</vaadin-grid-sorter>
+            </template>
+            <template>[[item.title]]</template>
+        </vaadin-grid-column>
+        <!-- <vaadin-grid-column width="30px" flex-grow="0">
+            <template class="header">
+            </template>
+            <template><iron-icon hidden$="[[!item.urgent]]" icon="notification:priority-high"></iron-icon></template>
+        </vaadin-grid-column> -->
+        <!-- <vaadin-grid-column width="30px" flex-grow="0">
+            <template class="header">
+                Accepted
+            </template>
+            <template><iron-icon hidden$="[[!item.accepted]]" icon="icons:check"></iron-icon></template>
+        </vaadin-grid-column>
+        <vaadin-grid-column width="30px" flex-grow="0">
+            <template class="header" >
+                Completed
+            </template>
+            <template><iron-icon hidden$="[[!item.completed]]" icon="icons:check"></iron-icon></template>
+        </vaadin-grid-column> -->
+      </vaadin-grid>
+
     </div>
   </template>
 
   <script>
     class VolunteerTasking extends Polymer.Element {
       static get is() { return 'volunteer-tasking'; }
+      static get properties() {
+        return {
+          userTask: {
+            type:Object,
+            value:{
+              title: "Waiting for task"
+            }
+            // value: {
+            //     issuedAt: "2017-09-30 13:30",
+            //     location: {lng:-1.995380, lat:50.716438},
+            //     title: "Pick up prescription",
+            //     description: "Mrs Higgins requires someone to collect her prescription medication from the pharmacy",
+            //     accepted: true,
+            //     completed: false,
+            //     urgent: false
+            //   },
+          },
+          userReady: Boolean,
+          userLocation: Object,
+          activeTask: Object,
+          userTasks: {
+            type: Array,
+            value: [
+              {
+                issuedAt: "2017-09-30 13:30",
+                location: {lng:-1.995380, lat:50.716438},
+                title: "Pick up prescription",
+                description: "Mrs Higgins requires someone to collect her prescription medication from the pharmacy",
+                accepted: true,
+                completed: false,
+                urgent: false
+              },
+              {
+                issuedAt: "2017-09-30 11:42",
+                location: {lng:-1.979250, lat:50.715358},
+                title: "Clear debris from drain",
+                description: "Debris is blocking a key drain near the high street, please clear asap",
+                accepted: true,
+                completed: false,
+                urgent: false 
+              },
+              {
+                issuedAt: "2017-09-29 23:30",
+                location: {lng:-1.987262, lat:50.712132},
+                title: "Man in water off Quay",
+                description: "Man in water off Poole Quay. RNLI en route, DO NOT ENTER WATER. Use lifering by RNLI station to provide assistance",
+                accepted: false,
+                completed: true,
+                urgent: true
+              }
+            ]
+          }
+        };
+      }
+
+      _refreshData() {
+        
+        this.set('userTask', {
+          title: "Assist Gloria Davis" ,
+          issuedAt: "2017-09-30 18:30",
+          description: "Gloria Davies has requested assistance, please proceed",
+          location: {lng:-1.995380, lat:50.716438}
+        });
+
+
+        // var request = { 
+        //     type: 'tasks'
+        //   }
+        // console.log('Refreshing task data');
+        // this.dispatchEvent(new CustomEvent('xhr-request', {detail: request, bubbles: true, composed: true}));
+      }
+
+      constructor() {
+        super();
+        var self = this;
+        var interval = setInterval(function(){ 
+         self._refreshData(); 
+        }, 5000);
+      }
     }
 
     window.customElements.define(VolunteerTasking.is, VolunteerTasking);

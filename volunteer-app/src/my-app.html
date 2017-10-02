@@ -20,7 +20,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../bower_components/iron-pages/iron-pages.html">
 <link rel="import" href="../bower_components/iron-selector/iron-selector.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="rugged-request.html">
 <link rel="import" href="my-icons.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
 
 <link rel="lazy-import" href="volunteer-signup.html">
 <link rel="lazy-import" href="volunteer-report.html">
@@ -29,6 +31,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <dom-module id="my-app">
   <template>
+    <style is="custom-style" include="iron-flex iron-flex-alignment"></style>      
     <style>
       :host {
         --app-primary-color: #4285f4;
@@ -75,14 +78,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         data="{{routeData}}"
         tail="{{subroute}}"></app-route>
 
+      <rugged-request
+        id="api"
+        authenticate="false"
+        url="http://172.20.10.3:3003/floodzone/"
+        on-request-done="_handleResponse"
+        on-request-headers-recieved="_handleHeadersReceived"
+        on-request-loading="_handleResponseLoading"
+        on-request-error="_handleResponseError">
+      </rugged-request>
+
     <app-drawer-layout fullbleed narrow="{{narrow}}">
       <!-- Drawer content -->
       <app-drawer id="drawer" slot="drawer" swipe-open="[[narrow]]">
         <app-toolbar>Menu</app-toolbar>
         <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
           <a name="signup" href="[[rootPath]]signup">Volunteer now</a>
+          <a name="tasking" href="[[rootPath]]tasking">Your tasks</a>          
           <a name="report" href="[[rootPath]]report">Report your status</a>
-          <a name="tasking" href="[[rootPath]]tasking">Your tasks</a>
         </iron-selector>
       </app-drawer>
 
@@ -100,10 +113,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             selected="[[page]]"
             attr-for-selected="name"
             fallback-selection="view404"
-            role="main">
+            role="main"
+            on-xhr-request="_sendRequest">
           <volunteer-signup name="signup"></volunteer-signup>
           <volunteer-report name="report"></volunteer-report>
-          <volunteer-tasking name="tasking"></volunteer-tasking>
+          <volunteer-tasking id="tasking" name="tasking"></volunteer-tasking>
           <volunteer-view404 name="view404"></volunteer-view404>
         </iron-pages>
       </app-header-layout>
@@ -158,6 +172,101 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _showPage404() {
         this.page = 'view404';
+      }
+      
+      _sendRequest(e) {
+        var request = e.detail;
+
+        console.log('REQUEST', request);
+
+        //If there's no request then we can't really do much.
+        if(!request) {
+          console.error('No request attached');
+          return;
+        }
+
+        //For update and insert requests, check there's a body
+        if(!request.body && (request.action === 'insert' || request.action === 'update')) {
+          console.error('No body attached to request');
+          return;
+        }
+
+        request.path = request.type;
+
+        //Insert any parameters into the url
+        if(request.params) {
+          for(let name in request.params) {
+            let val = request.params[name];
+            //search to see if this id is a named parameter in the url
+            let namedParamString = '{' + name + '}';
+            if(request.url.includes(namedParamString)) {
+              request.url = request.url.replace(namedParamString, request.params[name]);
+              delete request.params[name]; //remove the variable so that it's not added as a query string
+            }
+          }
+        }
+
+        console.log('REQUEST2', request);
+
+        //Send the request
+        this.$.api.send(request);
+
+        if(this.page === "signup") {
+          this.set('page', 'tasking');
+        }
+      }
+
+      _handleResponseLoading(response) {
+        //console.log("Loading", response);
+      }
+
+      _handleHeadersReceived(response) {
+        //console.log("Received", response);
+      }
+
+      _handleResponse(e) {
+        console.log('RESPONSE', e);
+        if(e.detail) {
+          switch(e.detail.request.path) {
+            case 'volunteer': {
+              this.set('page', 'tasking');
+            }
+            case 'tasks': {
+              this.$.tasking.userTask = e.detail.response;
+            }
+          }
+        }
+
+        // if (e.detail) {
+        //   switch(e.detail.request.action) {
+        //     case 'list':
+        //       if(!this.data.lists) this.data.lists = {};
+
+        //       //Make sure that an empty array is set if there aren't any items otherwise the list won't refresh
+        //       var items = e.detail.response.items;
+        //       if(!items) {items = [];}
+
+        //       //Set the appropriate property of lists to the items returned from the api
+        //       this.data.lists[e.detail.request.type] = items;
+        //       break;
+        //     case 'get':
+        //     case 'insert':
+        //     case 'update':
+        //       if(!this.data.selected) this.data.selected = {};
+        //       this.data.selected[e.detail.request.type] = e.detail.response;
+        //       break;
+        //     case 'delete':
+        //       this.data.selected[e.detail.request.type] = {};
+        //       break;
+        //     default:
+        //       break;
+        //   }
+        //   this.notifyPath('data');
+        // }
+      }
+
+      _handleResponseError(e) {
+        console.error("Error", e);
       }
     }
 

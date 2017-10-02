@@ -1,0 +1,196 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="rugged-request">
+  <template>
+    <style>
+      :host {
+        display: none;
+      }
+    </style>
+  </template>
+
+  <script>
+    class RuggedRequest extends Polymer.Element {
+      static get is() { return 'rugged-request'; }
+      static get properties() {
+        return {
+          url: {
+            type:String,
+            value: ''
+          },
+          user :{
+            type: Object,
+            value: undefined
+          },
+          defaults: {
+            type: Object,
+            value: {
+              authenticate: true,
+              path: '',
+              method: 'GET',
+              headers: {
+                "Cache-control": "max-age=0, no-store, must-revalidate, post-check=0, pre-check=0",
+                "Pragma": "no-cache",
+                "Expires": "0"
+              },
+              async: true,
+              params: {},
+              body: null, //default to null, as this is what xhr will require
+              responseType: 'json'
+            }
+          }
+        };
+      }
+
+      _toQueryString(params) {
+        var result = [];
+        for (var name in params) {
+          var value = params[name];
+          name = encodeURIComponent(name);
+          result.push(value == null ? name : (name + "=" + encodeURIComponent(value)));
+        }
+        return result.join("&");
+      }
+
+      _setStateHandlers(xhr, request) {
+        var self = this;
+        xhr.onreadystatechange = function() {
+          //console.log('Ready state changed', xhr, request);
+          var detail = {};
+          var event = '';
+          switch(xhr.readyState) {
+            case 2:
+              event = 'request-headers-recieved';
+              break;
+            case 3:
+              event = 'request-loading';
+              break;
+            case 4:
+              if (xhr.status == 200 || xhr.status == 204) {
+                detail = {
+                  response: xhr.response,
+                  responseType: xhr.responseType,
+                  responseURL: xhr.responseURL,
+                  request: request
+                }
+                event = 'request-done';
+
+                //If there's a callback associated with the request, try to fire it.
+                if(request.callback) {
+                  request.callback(detail);
+                }
+              } else {
+                detail = {
+                  status: xhr.status,
+                  statusText: xhr.statusText,
+                  error: xhr.response,
+                  request: request
+                }
+                event = 'request-error';
+              }
+              break;
+          }
+
+          self.dispatchEvent(new CustomEvent(event, {detail: detail, bubbles: true, composed: true}));        
+        };
+      }
+
+      _getRequestDetails(details) {
+        var result = JSON.parse(JSON.stringify(this.defaults)); //clone the defaults
+        
+        //iterate over properties in details and override the defaults
+        for(var prop in details) {
+          result[prop] = details[prop];
+        }
+
+        return result;
+      }
+
+      //details should be an object with parameters that override the defaults, structured in the same way as `this.defaults`
+      //In this way overrideDetails can be used to change the URL, headers etc.
+      send(details) {
+
+        //Compute the details of the request from the defaults and the overrideDetails
+        const requestDetails = this._getRequestDetails(details);
+
+        //Create the new xhr
+        var xhr = new XMLHttpRequest();
+
+        //default to the base url set as a parameter
+        var url = this.url;
+
+        //if there is a url set in the request details, override the bound url
+        if(requestDetails.url) {
+          url = requestDetails.url;
+        }
+
+        //concatenate the url and the request path, if there is one
+        if(requestDetails.path) {
+          url = url + requestDetails.path;
+        }
+
+        //Create the params query string
+        var params = this._toQueryString(requestDetails.params);
+
+        //If the method is GET, or the urlParams flag is set, append the params to the url
+        if (params && requestDetails.method == "GET" || requestDetails.urlParams) {
+          url += (url.indexOf("?") > 0 ? "&" : "?") + params;
+        }
+        
+        console.log("REQUEST DETAILS", url, requestDetails);
+
+        //Open the xhr with the computed details
+        xhr.open(requestDetails.method, url, requestDetails.async);
+
+        //If the request details include a response type, set it on the xhr
+        if (requestDetails.responseType) {
+          xhr.responseType = requestDetails.responseType;
+        }
+
+        //set a listener of the state change event of the xhr
+        //TODO - is this ever unsubscribed? 
+        this._setStateHandlers(xhr, requestDetails);
+
+        //Add the headers to the request
+        if (requestDetails.headers) {
+          for (var name in this.headers) {
+            xhr.setRequestHeader(name, this.headers[name]);
+          }
+        }
+
+        //If authentication is not required, send the xhr
+        if(!requestDetails.authenticate) {
+          this.sendXhr(xhr, requestDetails);
+          return;
+        }
+
+        //If no user is set, fire an error in the console and try to send the xhr anyway
+        if(!this.user) {
+          //TODO - warn user
+           console.error ('No user set');
+           this.sendXhr(xhr, requestDetails);
+           return;
+        }
+
+        //Get the auth token and append to headers when the promise returns
+        var self = this;
+        this.user.getIdToken().then(function(token) {
+            xhr.setRequestHeader("Authorization", "Bearer " + JSON.stringify(token));
+            self.sendXhr(xhr, requestDetails);
+          });
+      }
+
+      sendXhr(xhr, requestDetails) {
+        //Send the request
+        xhr.send(JSON.stringify(requestDetails.body));
+
+        //Force the state change method
+        if (!requestDetails.async) {
+          xhr.onreadystatechange(xhr);
+        }
+      }
+    }
+
+    window.customElements.define(RuggedRequest.is, RuggedRequest);
+  </script>
+</dom-module>
